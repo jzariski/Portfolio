@@ -1,0 +1,7 @@
+streamlit>=1.37
+numpy>=1.26
+xgboost>=2.0
+matplotlib>=3.9
+h5py>=3.11
+pandas>=2.2
+scikit-learn>=1.5

@@ -1,4 +1,4 @@
-# Public Portfolio
+# Jackson Zariski Public Portfolio
 This is a portfolio of my previous projects, edited so that they can be shared in a public capacity.
 
 ## telescope-acquisition-app

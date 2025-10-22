@@ -2,14 +2,15 @@
 This is a portfolio of my previous projects, edited so that they can be shared in a public capacity.
 
 ## telescope-acquisition-app
-This is my machine-learning software for use by telescope operators to make real-time pointing corrections.
+This is my machine-learning software for use by telescope operators to make real-time pointing corrections. 
+Written in Python with TensorFlow. Included a GUI built with Streamlit.
 
 ## Telescope Docker
 An application of my ML pointing software using a Docker/Flask container framework.
 
 ## WordleBot
-This is a side project of mine where I built a machine-learning optimizer to try and solve the Wordle in the fewest guesses
-Built a deep feed-forward network taking advantage of tokenization to prescribe utility scores to words
+This is a side project of mine where I built a machine-learning optimizer to try and solve the Wordle in the fewest guesses.
+Built a deep feed-forward network taking advantage of tokenization to prescribe utility scores to words.
 
 ## TelQueue
 An in-progress framework for using mixed-integer programming to optimize telescope queues for a given night. 

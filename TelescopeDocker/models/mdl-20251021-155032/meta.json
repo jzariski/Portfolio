@@ -1,0 +1,49 @@
+{
+  "feature_cols": [
+    "years",
+    "months",
+    "days",
+    "hours",
+    "minutes",
+    "seconds",
+    "lst_hours",
+    "tpt_ra_deg",
+    "tpt_dec_deg",
+    "prev_ra_offset",
+    "prev_dec_offset"
+  ],
+  "target_cols": [
+    "ra_offset",
+    "dec_offset"
+  ],
+  "training_rows": 14589,
+  "schema": {
+    "train_input": [
+      "DATE-OBS",
+      "LST",
+      "TPT-RA",
+      "TPT-DEC",
+      "CRVAL1",
+      "CRVAL2"
+    ],
+    "predict_accepts": [
+      "DATE-OBS",
+      "LST",
+      "TPT-RA",
+      "TPT-DEC",
+      "years",
+      "months",
+      "days",
+      "hours",
+      "minutes",
+      "seconds",
+      "lst_hours",
+      "tpt_ra_deg",
+      "tpt_dec_deg"
+    ],
+    "notes": [
+      "No RA wrapping applied to (tpt_ra_deg - CRVAL1).",
+      "prev_ra_offset/prev_dec_offset are added internally; set to 0 for the first call per session."
+    ]
+  }
+}

@@ -13,7 +13,7 @@ import argparse
 
 # Enable/disable time-gap filtering and threshold (seconds)
 # Enable/disable similarity filtering and parameters:
-# keep only the first SIM_K acquisitions whose TPT-RA/Dec change is < EPSILON
+# keep only the first SIM_K acquisitions whose obs-RA/Dec change is < EPSILON
 # Which row index to sample for verbose inspection
 SAMPLE_INDEX = 0
 # Output filenames
@@ -90,7 +90,7 @@ def load_out_file(filename):
     raw_lines = []  # keep for sample inspection
     cols = { 'years':[], 'months':[], 'days':[],
              'hours':[], 'minutes':[], 'seconds':[],
-             'lst':[], 'tpt_ra':[], 'tpt_dec':[], 'wcs_ra':[], 'wcs_dec':[] }
+             'lst':[], 'obs_ra':[], 'obs_dec':[], 'solv_ra':[], 'solv_dec':[] }
 
     with open(filename, 'r') as f:
         for line in f:
@@ -102,7 +102,7 @@ def load_out_file(filename):
             if len(parts) != 6:
                 continue
             raw_lines.append(line)
-            dt_str, lst_str, ra_str, dec_str, wcs_ra_str, wcs_dec_str = parts
+            dt_str, lst_str, ra_str, dec_str, solv_ra_str, solv_dec_str = parts
             dt = parse_iso_datetime(dt_str)
             cols['years'].append(dt.year)
             cols['months'].append(dt.month)
@@ -111,16 +111,16 @@ def load_out_file(filename):
             cols['minutes'].append(dt.minute)
             cols['seconds'].append(dt.second + dt.microsecond/1e6)
             cols['lst'].append(hms_to_hours(lst_str))
-            cols['tpt_ra'].append(hms_to_degrees(ra_str))
-            cols['tpt_dec'].append(dms_to_degrees(dec_str))
-            cols['wcs_ra'].append(float(wcs_ra_str))
-            cols['wcs_dec'].append(float(wcs_dec_str))
+            cols['obs_ra'].append(hms_to_degrees(ra_str))
+            cols['obs_dec'].append(dms_to_degrees(dec_str))
+            cols['solv_ra'].append(float(solv_ra_str))
+            cols['solv_dec'].append(float(solv_dec_str))
 
     data = np.column_stack([
         cols['years'], cols['months'], cols['days'],
         cols['hours'], cols['minutes'], cols['seconds'],
-        cols['lst'], cols['tpt_ra'], cols['tpt_dec'],
-        cols['wcs_ra'], cols['wcs_dec']
+        cols['lst'], cols['obs_ra'], cols['obs_dec'],
+        cols['solv_ra'], cols['solv_dec']
     ])
     return raw_lines, data
 
@@ -151,7 +151,7 @@ def filter_by_dt(raw_lines, data, min_dt):
 
 
 def filter_by_similarity(raw_lines, data, K, eps):
-    """Keep only first K points with ΔTPT-RA/Dec < eps; drop others."""
+    """Keep only first K points with Δobs-RA/Dec < eps; drop others."""
     keep = [True]
     sim_count = 0
     for i in range(1,len(data)):

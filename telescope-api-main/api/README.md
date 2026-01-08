@@ -1,8 +1,8 @@
-# LCO API
+# Telescope API
 
-## LCO Telescope API — Docker Quickstart
+## Telescope Telescope API — Docker Quickstart
 
-Predicts telescope pointing offsets from a LCO historical observation log via an API.  
+Predicts telescope pointing offsets from a Telescope historical observation log via an API.  
 
 ### Requirements
 
@@ -50,7 +50,7 @@ open -a "Docker"
 ```
 
 ```bash
-docker build -t lco-api .
+docker build -t Telescope-api .
 ```
 
 Important: If used in the past it's a good idea to empty the logs and plots folder
@@ -58,7 +58,7 @@ Important: If used in the past it's a good idea to empty the logs and plots fold
 # 2) Keeps outputs on the host machine
 
 ```bash
-docker run -it --rm -v "$PWD":/app lco-api
+docker run -it --rm -v "$PWD":/app Telescope-api
 ```
 
 # 3.1) Format Data

@@ -28,15 +28,15 @@ Predicts telescope pointing offsets from a Telescope historical observation log 
 Your training file is a whitespace-delimited text file whose **first six columns (in this exact order)** are:
 
 ```
-DATE-OBS     LST     TPT-RA     TPT-DEC     CRVAL1     CRVAL2
+DATE-OBS     LST     OBS-RA     OBS-DEC     CRVAL1     CRVAL2
 ```
 
 - **DATE-OBS**: ISO date/time (e.g. `2025-05-09T04:26:12.247Z` or without `Z`)
 - **LST**: sidereal time (`HH:MM:SS[.sss]`)
-- **TPT-RA**: pointing RA (`HH:MM:SS[.sss]`) — hours, no wrapping performed
-- **TPT-DEC**: pointing Dec (`±DD:MM:SS[.ss]`)
-- **CRVAL1**: WCS RA in **degrees**
-- **CRVAL2**: WCS Dec in **degrees**
+- **OBS-RA**: pointing RA (`HH:MM:SS[.sss]`) — hours, no wrapping performed
+- **OBS-DEC**: pointing Dec (`±DD:MM:SS[.ss]`)
+- **CRVAL1**: SOLV RA in **degrees**
+- **CRVAL2**: SOLV Dec in **degrees**
 
 
 ---
@@ -70,7 +70,7 @@ python load_out --input 'file_path'
 ```
 Other Arguments
 - --dt: Default 0.0. Minimum time difference between successive points kept in training set.
-- --toCIRS: Default True. Converts WCS to CIRS frame (assuming ICRS originally).
+- --toCIRS: Default True. Converts SOLV to CIRS frame (assuming ICRS originally).
 - --sim: Default 0. Number of consecutive similar acquisition points to keep in traiing data.
 - --eps: Default 0.1. Defines similarity if sim > 0.
 
@@ -78,7 +78,7 @@ Other Arguments
 # 3.2) Trains an RA/Dec Model
 
 Right now we've chosen the specs of the model for you. We're adding in ways that the user can change it soon
-This model is trained to predict the offset between TPT RA/DEC and WCS (CRVAL) RA/DEC
+This model is trained to predict the offset between OBS RA/DEC and SOLV (CRVAL) RA/DEC
 
 ```bash
 python booster.py
@@ -95,7 +95,7 @@ python Sobol.py
 
 # 4) Predict
 
-Used to predict offset between TPT and WCS. Uses former predicted offsets as features, keeping track in 
+Used to predict offset between OBS and SOLV. Uses former predicted offsets as features, keeping track in 
 prediction_log.txt in the logs directory. Most recent entry is what is used, to restart, delete the txt file.
 
 ```bash
@@ -107,8 +107,8 @@ python predict.py \
   --minute int \
   --second int \
   --lst-hours float \
-  --tpt-ra-deg float \
-  --tpt-dec-deg float \
+  --OBS-ra-deg float \
+  --OBS-dec-deg float \
   --lat-deg float \
   --lon-deg float \
   --elevation-m float \

@@ -1,8 +1,8 @@
-# LCO API (FLASK VERSION)
+# Telescope API (FLASK VERSION)
 
-## LCO Telescope API — Docker Quickstart
+## Telescope API — Docker Quickstart
 
-Predicts telescope pointing offsets from a LCO historical observation log via an API. Flask Version  
+Predicts telescope pointing offsets from a Telescope historical observation log via an API. Flask Version  
 
 ### Requirements
 
@@ -33,13 +33,13 @@ open -a "Docker"
 ```
 
 ```bash
-docker build -t lco-api-flask .
+docker build -t Telescope-api-flask .
 
 docker run --rm -d \
-  --name lco-api-flask \
+  --name Telescope-api-flask \
   -p 5000:5000 \
   -v "$PWD:/app" \
-  lco-api-flask
+  Telescope-api-flask
 ```
 
 Important: If used in the past it's a good idea to empty the logs and plots folder
@@ -132,7 +132,7 @@ curl -X POST "http://localhost:5000/predict?format=text" \
 
 4) Kill the container
 ```bash
-docker rm -f lco-api-flask
+docker rm -f Telescope-api-flask
 ```
 
 

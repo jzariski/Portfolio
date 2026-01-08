@@ -3,9 +3,9 @@
 prepare_and_train_xgb.py
 
 1) Load and sort the HDF5‐saved array (year,month,day,hour,minute,second,
-   lst_hours, tpt_ra_deg, tpt_dec_deg, wcs_ra_deg, wcs_dec_deg).
+   lst_hours, obs_ra_deg, obs_dec_deg, solv_ra_deg, solv_dec_deg).
 2) Split chronologically into train(70%), eval(10%), test(20%).
-3) Build X (all columns except WCS RA/Dec) and y = [TPT−WCS].
+3) Build X (all columns except solv RA/Dec) and y = [obs−solv].
 4) Define and train two XGBRegressors (one for RA‐offset, one for DEC‐offset).
 5) Predict on test, then plot & save true vs. predicted offsets.
 """
@@ -68,30 +68,30 @@ def split_time_series(data, train_frac=0.7, eval_frac=0.1):
  data = np.column_stack([
         cols['years'], cols['months'], cols['days'],
         cols['hours'], cols['minutes'], cols['seconds'],
-        cols['lst'], cols['tpt_ra'], cols['tpt_dec'],
-        cols['wcs_ra'], cols['wcs_dec']
+        cols['lst'], cols['obs_ra'], cols['obs_dec'],
+        cols['solv_ra'], cols['solv_dec']
     ])
 '''
 
 
 def make_features_and_labels(split_data):
     """
-    Inputs X: all columns except the last two (WCS RA/Dec).
-    Labels y: shape (M,2) = [TPT_RA - WCS_RA, TPT_DEC - WCS_DEC].
+    Inputs X: all columns except the last two (solv RA/Dec).
+    Labels y: shape (M,2) = [obs_RA - solv_RA, obs_DEC - solv_DEC].
     Column indices:
-       7:TPT_RA  8:TPT_DEC  9:WCS_RA  10:WCS_DEC
+       7:obs_RA  8:obs_DEC  9:solv_RA  10:solv_DEC
     """
     
-    ## USING WCS AS A FEAUTRE BECAUSE WE'RE TRYING TO HIT IT
+    ## USING solv AS A FEAUTRE BECAUSE WE'RE TRYING TO HIT IT
     X = split_data[:, [0,1,2,3,4,5,6,9,10]]
     
-    tpt_ra, tpt_dec = split_data[:,7], split_data[:,8]
+    obs_ra, obs_dec = split_data[:,7], split_data[:,8]
     
-    wcs_ra, wcs_dec = split_data[:,9], split_data[:,10]
+    solv_ra, solv_dec = split_data[:,9], split_data[:,10]
 
     
     
-    previous_acq_error_ra, previous_acq_error_dec = (tpt_ra - wcs_ra), (tpt_dec - wcs_dec)
+    previous_acq_error_ra, previous_acq_error_dec = (obs_ra - solv_ra), (obs_dec - solv_dec)
     previous_acq_error_ra, previous_acq_error_dec = np.roll(previous_acq_error_ra, 1), np.roll(previous_acq_error_dec,1)
     previous_acq_error_ra[0] = 0
     previous_acq_error_dec[0] = 0
@@ -101,7 +101,7 @@ def make_features_and_labels(split_data):
     
 
     X = np.column_stack([X, previous_acq_error_ra, previous_acq_error_dec])
-    y = np.column_stack([tpt_ra - wcs_ra, tpt_dec - wcs_dec])
+    y = np.column_stack([obs_ra - solv_ra, obs_dec - solv_dec])
     
     
     '''
@@ -110,7 +110,7 @@ def make_features_and_labels(split_data):
         years, months, days,
         hours, minutes, seconds,
         lst_hours,
-        tpt_ra_deg, tpt_dec_deg,
+        obs_ra_deg, obs_dec_deg,
         previous_acq_error_ra, previous_acq_error_dec,
     ])
     '''
@@ -180,7 +180,7 @@ D = X_train.shape[1]
 names = ['years', 'months', 'days',
         'hours', 'minutes', 'seconds',
         'lst_hours',
-        'tpt_ra_deg', 'tpt_dec_deg',
+        'obs_ra_deg', 'obs_dec_deg',
         'previous_acq_error_ra', 'previous_acq_error_dec']
 
 print('here?')

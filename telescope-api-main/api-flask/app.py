@@ -54,15 +54,15 @@ def parse_predict_output(stdout: str):
     Designed to work with a predict.py that prints lines like:
 
       === Prediction ===
-      TPT RA (deg):  ...
-      TPT DEC (deg): ...
+      obs RA (deg):  ...
+      obs DEC (deg): ...
       Predicted RA offset (deg):  ...
       Predicted DEC offset (deg): ...
 
     Optionally, if you print Alt/Az lines such as:
 
-      TPT ALT (deg):  ...
-      TPT AZ  (deg):  ...
+      obs ALT (deg):  ...
+      obs AZ  (deg):  ...
       Predicted ALT offset (deg): ...
       Predicted AZ offset (deg):  ...
 
@@ -88,8 +88,8 @@ def parse_predict_output(stdout: str):
 
 
         # Optional Alt/Az lines
-        grab("TPT ALT (deg):", "tpt_alt_deg")
-        grab("TPT AZ", "tpt_az_deg")  # matches "TPT AZ  (deg):"
+        grab("obs ALT (deg):", "obs_alt_deg")
+        grab("obs AZ", "obs_az_deg")  # matches "obs AZ  (deg):"
         grab("Predicted ALT offset (deg):", "alt_offset_deg")
         grab("Predicted AZ offset (deg):", "az_offset_deg")
 
@@ -248,8 +248,8 @@ def predict():
       "second": 0,
       "lst_hours": 5.75,
 
-      "tpt_ra_deg": 123.456,
-      "tpt_dec_deg": -20.0,
+      "obs_ra_deg": 123.456,
+      "obs_dec_deg": -20.0,
 
       "lat_deg": 31.9583,    # or "lat-deg"
       "lon_deg": -111.5986,  # or "lon-deg"
@@ -271,7 +271,7 @@ def predict():
         "year", "month", "day",
         "hour", "minute", "second",
         "lst_hours",
-        "tpt_ra_deg", "tpt_dec_deg",
+        "obs_ra_deg", "obs_dec_deg",
     ]
     missing_scalar = [k for k in scalar_required if k not in data]
     if missing_scalar:
@@ -310,8 +310,8 @@ def predict():
         "--minute", str(data["minute"]),
         "--second", str(data["second"]),
         "--lst-hours", str(data["lst_hours"]),
-        "--tpt-ra-deg", str(data["tpt_ra_deg"]),
-        "--tpt-dec-deg", str(data["tpt_dec_deg"]),
+        "--obs-ra-deg", str(data["obs_ra_deg"]),
+        "--obs-dec-deg", str(data["obs_dec_deg"]),
         "--lat-deg", str(lat),
         "--lon-deg", str(lon),
         "--elevation-m", str(elevation),
@@ -349,9 +349,9 @@ def predict():
     }
 
 
-    tpt_horizon = {
-        "alt_deg": parsed.get("tpt_alt_deg"),
-        "az_deg": parsed.get("tpt_az_deg"),
+    obs_horizon = {
+        "alt_deg": parsed.get("obs_alt_deg"),
+        "az_deg": parsed.get("obs_az_deg"),
     }
 
     offsets_horizon = {
@@ -370,18 +370,18 @@ def predict():
             "minute": data["minute"],
             "second": data["second"],
             "lst_hours": data["lst_hours"],
-            "tpt_ra_deg": data["tpt_ra_deg"],
-            "tpt_dec_deg": data["tpt_dec_deg"],
+            "obs_ra_deg": data["obs_ra_deg"],
+            "obs_dec_deg": data["obs_dec_deg"],
             "lat_deg": float(lat),
             "lon_deg": float(lon),
             "elevation_m": float(elevation),
         },
         "prediction": {
             "offsets_equatorial": offsets_equatorial,
-            "wcs_equatorial": wcs_equatorial,
-            "tpt_horizon": tpt_horizon,
+            "solv_equatorial": solv_equatorial,
+            "obs_horizon": obs_horizon,
             "offsets_horizon": offsets_horizon,
-            "wcs_horizon": wcs_horizon,
+            "solv_horizon": solv_horizon,
         },
         "log_file": log_file,
         "raw_stdout": out,
@@ -399,37 +399,37 @@ def predict():
             f"  UTC time      : {inp['year']:04d}-{inp['month']:02d}-{inp['day']:02d} "
             f"{inp['hour']:02d}:{inp['minute']:02d}:{inp['second']:02d}",
             f"  LST (hours)   : {inp['lst_hours']}",
-            f"  TPT RA/Dec    : {inp['tpt_ra_deg']} deg, {inp['tpt_dec_deg']} deg",
+            f"  obs RA/Dec    : {inp['obs_ra_deg']} deg, {inp['obs_dec_deg']} deg",
             f"  Site lat/lon  : {inp['lat_deg']} deg, {inp['lon_deg']} deg",
             f"  Elevation     : {inp['elevation_m']} m",
             "",
-            "Equatorial offsets (TPT - WCS):",
+            "Equatorial offsets (obs - solv):",
             f"  RA offset     : {offsets_equatorial['ra_deg']}",
             f"  Dec offset    : {offsets_equatorial['dec_deg']}",
             "",
         ]
 
         # Only print horizon stuff if available
-        if any(v is not None for v in tpt_horizon.values()):
+        if any(v is not None for v in obs_horizon.values()):
             lines += [
                 "",
-                "TPT horizon coordinates:",
-                f"  Alt           : {tpt_horizon['alt_deg']}",
-                f"  Az            : {tpt_horizon['az_deg']}",
+                "obs horizon coordinates:",
+                f"  Alt           : {obs_horizon['alt_deg']}",
+                f"  Az            : {obs_horizon['az_deg']}",
             ]
         if any(v is not None for v in offsets_horizon.values()):
             lines += [
                 "",
-                "Horizon offsets (WCS - TPT):",
+                "Horizon offsets (solv - obs):",
                 f"  Alt offset    : {offsets_horizon['alt_deg']}",
                 f"  Az offset     : {offsets_horizon['az_deg']}",
             ]
-        if any(v is not None for v in wcs_horizon.values()):
+        if any(v is not None for v in solv_horizon.values()):
             lines += [
                 "",
-                "Suggested WCS horizon coordinates:",
-                f"  Alt           : {wcs_horizon['alt_deg']}",
-                f"  Az            : {wcs_horizon['az_deg']}",
+                "Suggested solv horizon coordinates:",
+                f"  Alt           : {solv_horizon['alt_deg']}",
+                f"  Az            : {solv_horizon['az_deg']}",
             ]
 
         lines += [

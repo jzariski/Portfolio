@@ -1,6 +1,6 @@
 # Telescope API
 
-## Telescope Telescope API — Docker Quickstart
+## Telescope API — Docker Quickstart
 
 Predicts telescope pointing offsets from a Telescope historical observation log via an API.  
 

@@ -14,15 +14,15 @@ Predicts telescope pointing offsets from a Telescope historical observation log 
 Your training file is a whitespace-delimited text file whose **first six columns (in this exact order)** are:
 
 ```
-DATE-OBS     LST     TPT-RA     TPT-DEC     CRVAL1     CRVAL2
+DATE-OBS     LST     obs-RA     obs-DEC     CRVAL1     CRVAL2
 ```
 
 - **DATE-OBS**: ISO date/time (e.g. `2025-05-09T04:26:12.247Z` or without `Z`)
 - **LST**: sidereal time (`HH:MM:SS[.sss]`)
-- **TPT-RA**: pointing RA (`HH:MM:SS[.sss]`) — hours, no wrapping performed
-- **TPT-DEC**: pointing Dec (`±DD:MM:SS[.ss]`)
-- **CRVAL1**: WCS RA in **degrees**
-- **CRVAL2**: WCS Dec in **degrees**
+- **obs-RA**: pointing RA (`HH:MM:SS[.sss]`) — hours, no wrapping performed
+- **obs-DEC**: pointing Dec (`±DD:MM:SS[.ss]`)
+- **CRVAL1**: solv RA in **degrees**
+- **CRVAL2**: solv Dec in **degrees**
 
 
 
@@ -79,13 +79,13 @@ curl -X POST "http://localhost:5000/train?format=text" \
 Arguments
 - -- input_file: Path to the txt file containing historical telemetry.
 - --min_dt: Default 0.0. Minimum time difference between successive points kept in training set.
-- --to_cirs: Default True. Converts WCS to CIRS frame (assuming ICRS originally).
+- --to_cirs: Default True. Converts solv to CIRS frame (assuming ICRS originally).
 - --sim_k: Default 0. Number of consecutive similar acquisition points to keep in traiing data.
 - --eps: Default 0.1. Defines similarity if sim > 0.
 
 
 3) Example call for predicting with the model
-Used to predict offset between TPT and WCS. Uses former predicted offsets as features, keeping track in 
+Used to predict offset between obs and solv. Uses former predicted offsets as features, keeping track in 
 prediction_log.txt in the logs directory. Most recent entry is what is used, to restart, delete the txt file.
 ```bash
 curl -X POST http://localhost:5000/predict \
@@ -98,8 +98,8 @@ curl -X POST http://localhost:5000/predict \
     "minute": 30,
     "second": 0,
     "lst_hours": 5.75,
-    "tpt_ra_deg": 123.456,
-    "tpt_dec_deg": -20.0,
+    "obs_ra_deg": 123.456,
+    "obs_dec_deg": -20.0,
     "lat-deg": 31.9583,
     "lon-deg": -111.5986,
     "elevation-m": 2400.0,
@@ -121,8 +121,8 @@ curl -X POST "http://localhost:5000/predict?format=text" \
     "minute": 30,
     "second": 0,
     "lst_hours": 5.75,
-    "tpt_ra_deg": 123.456,
-    "tpt_dec_deg": -20.0,
+    "obs_ra_deg": 123.456,
+    "obs_dec_deg": -20.0,
     "lat-deg": 31.9583,
     "lon-deg": -111.5986,
     "elevation-m": 2400.0,

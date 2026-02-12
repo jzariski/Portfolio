@@ -5,7 +5,7 @@ This is a portfolio of my previous projects, edited so that they can be shared i
 This is my machine-learning software for use by telescope operators to make real-time pointing corrections. 
 Written in Python with TensorFlow. Included a GUI built with Streamlit.
 
-## Telescope Docker
+## Telescope API
 An application of my ML pointing software using a Docker/Flask container framework.
 
 ## WordleBot

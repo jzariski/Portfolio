@@ -18,9 +18,7 @@ import math
 
 
 
-# =========================
 # Data model
-# =========================
 
 @dataclass
 class Request:
@@ -33,9 +31,7 @@ class Request:
     priority: float = 1.0  ## optional weight
 
 
-# =========================
 # Time helpers (night windows)
-# =========================
 
 SECONDS_PER_DAY = 24 * 3600
 
@@ -107,9 +103,7 @@ def earliest_start_within_request(t: float,
     return None
 
 
-# =========================
 # Synthetic request generator
-# =========================
 
 def generate_requests(n: int,
                       horizon_days: int = 14,
@@ -182,9 +176,7 @@ def generate_requests(n: int,
             priority=item["priority"],
         ))
     return reqs
-# =========================
 # Build feasibility graph
-# =========================
 
 def build_graph(requests: List[Request],
                 start_ready_time: float = 0.0,
@@ -304,9 +296,7 @@ def build_graph(requests: List[Request],
     return G, arcs, costs
 
 
-# =========================
 # Example usage + final check printing
-# =========================
 
 def _fmt_hms(seconds: Optional[float]) -> str:
     """Quick formatter for printing times as Dd HH:MM:SS (handles None)."""

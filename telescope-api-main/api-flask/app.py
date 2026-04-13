@@ -21,9 +21,7 @@ from flask import Flask, request, jsonify, Response
 app = Flask(__name__)
 
 
-# ----------------------------------------------------------------------------- 
 # Helpers
-# -----------------------------------------------------------------------------
 
 def run_script(cmd, cwd=None, env=None):
     """
@@ -101,9 +99,7 @@ def text_response(body: str, status: int = 200):
     return Response(body + "\n", status=status, mimetype="text/plain")
 
 
-# ----------------------------------------------------------------------------- 
 # Routes
-# -----------------------------------------------------------------------------
 
 @app.route("/train", methods=["POST"])
 def train():

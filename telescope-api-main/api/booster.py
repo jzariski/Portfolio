@@ -22,9 +22,7 @@ import matplotlib.pyplot as plt
 
 DATA_FILE = 'data/data.h5'
 
-# -----------------------------------------------------------------------------
 # 1) Load & sort utilities
-# -----------------------------------------------------------------------------
 
 def load_data(h5_file_path):
     """Load array from HDF5 file under dataset 'data'."""
@@ -41,9 +39,7 @@ def sort_by_datetime(data):
     idx = np.lexsort((secs, mins, hours, days, months, years))
     return data[idx]
 
-# -----------------------------------------------------------------------------
 # 2) Split into train/eval/test
-# -----------------------------------------------------------------------------
 
 def split_time_series(data, train_frac=0.7, eval_frac=0.1):
     """
@@ -57,9 +53,7 @@ def split_time_series(data, train_frac=0.7, eval_frac=0.1):
     i_eval  = i_train + int(N * eval_frac)
     return data[:i_train], data[i_train:i_eval], data[i_eval:]
 
-# -----------------------------------------------------------------------------
 # 3) Build X/y
-# -----------------------------------------------------------------------------
 
 ## Reminder of what the feature matrix looks like
 '''
@@ -111,9 +105,7 @@ def make_features_and_labels(split_data):
     '''
     return X, y
 
-# -----------------------------------------------------------------------------
 # 4) XGBoost training & plotting (with save)
-# -----------------------------------------------------------------------------
 
 # Tweakable XGBoost parameters:
 xgb_params = {
@@ -163,21 +155,21 @@ def train_and_evaluate(X_train, y_train, X_eval, y_eval, X_test, y_test):
     mag_dec = np.abs(y_test[:, 1])
     
 
- # --- print RA stats ---
+ # print RA stats ---
     print("=== RA Offset Performance ===")
     print(f"Median absolute offset prediction error RA (Arcsec)     : {np.median(err_ra)*3600:.4f} arcsec")
     print(f"90th-percentile offset prediction error RA (Arcsec) : {np.percentile(err_ra, 90)*3600:.4f} arcsec")
     print(f"Median magnitude of obs-solv RA (Arcsec)      : {np.median(mag_ra)*3600:.4f} arcsec")
     print(f"90th-percentile of obs-solv RA (Arcsec).  : {np.percentile(mag_ra, 90)*3600:.4f} arcsec\n")
     
-    # --- print DEC stats ---
+    # print DEC stats ---
     print("=== DEC Offset Performance ===")
     print(f"Median absolute offset prediction error Dec (Arcsec)      : {np.median(err_dec)*3600:.4f} arcsec")
     print(f"90th-percentile offset prediction error Dec (Arcsec) : {np.percentile(err_dec, 90)*3600:.4f} arcsec")
     print(f"Median magnitude of obs-solv Dec (Arcsec)      : {np.median(mag_dec)*3600:.4f} arcsec")
     print(f"90th-percentile of obs-solv Dec (Arcsec)  : {np.percentile(mag_dec, 90)*3600:.4f} arcsec")
 
-    # --- Plot and save RA offsets ---
+    # Plot and save RA offsets ---
     plt.figure(figsize=(15,10))
     plt.suptitle('Offsets on Test Set')
     plt.subplot(1,2,1)
@@ -210,9 +202,7 @@ def train_and_evaluate(X_train, y_train, X_eval, y_eval, X_test, y_test):
     plt.savefig('plots/cdf.png', dpi=150)  # save to PNG
 
 
-# -----------------------------------------------------------------------------
 # Entry point
-# -----------------------------------------------------------------------------
 
 def main():
     with h5py.File(DATA_FILE, 'r') as hf:

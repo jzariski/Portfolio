@@ -22,9 +22,8 @@ import h5py
 import xgboost as xgb
 import matplotlib.pyplot as plt
 sys.stdout = open("logs/sobol_output.txt", "w")
-# -----------------------------------------------------------------------------
+
 # 1) Load & sort utilities
-# -----------------------------------------------------------------------------
 
 DATA_FILE = 'data/data.h5'
 
@@ -44,9 +43,7 @@ def sort_by_datetime(data):
     idx = np.lexsort((secs, mins, hours, days, months, years))
     return data[idx]
 
-# -----------------------------------------------------------------------------
 # 2) Split into train/eval/test
-# -----------------------------------------------------------------------------
 
 def split_time_series(data, train_frac=0.7, eval_frac=0.1):
     """
@@ -60,9 +57,7 @@ def split_time_series(data, train_frac=0.7, eval_frac=0.1):
     i_eval  = i_train + int(N * eval_frac)
     return data[:i_train], data[i_train:i_eval], data[i_eval:]
 
-# -----------------------------------------------------------------------------
 # 3) Build X/y
-# -----------------------------------------------------------------------------
 
 '''
  data = np.column_stack([
@@ -116,9 +111,7 @@ def make_features_and_labels(split_data):
     '''
     return X, y
 
-# -----------------------------------------------------------------------------
 # Entry point
-# -----------------------------------------------------------------------------
 
 
 # Load & sort
@@ -155,9 +148,7 @@ model_dec = xgb.XGBRegressor()
 model_dec.load_model('models/model_dec.json')
 
 
-# -----------------------------------------------------------------------------
 # 1. Prepare your data & model
-# -----------------------------------------------------------------------------
 
 # Assume you have:
 #   X_train: (N_train, D) array of training inputs
@@ -172,9 +163,7 @@ model_dec.load_model('models/model_dec.json')
 # Number of features
 D = X_train.shape[1]
 
-# -----------------------------------------------------------------------------
 # 2. Define the SALib problem
-# -----------------------------------------------------------------------------
 
 # Feature names (optional, for readability in outputs)
 names = ['years', 'months', 'days',
@@ -215,9 +204,7 @@ problem = {
     'bounds':   bounds
 }
 
-# -----------------------------------------------------------------------------
 # 3. Generate Saltelli samples
-# -----------------------------------------------------------------------------
 
 # Base sample size (choose based on your compute budget; 1000–5000 is typical)
 N_BASE = 2**14
@@ -225,18 +212,14 @@ N_BASE = 2**14
 # NOTE: setting calc_second_order=True will compute S_ij as well, but is more expensive
 param_values = saltelli.sample(problem, N_BASE, calc_second_order=False)
 
-# -----------------------------------------------------------------------------
 # 4. Evaluate the model on the sample matrix
-# -----------------------------------------------------------------------------
 
 # If your model.predict accepts batches, great; otherwise you can loop.
 # This will produce an array y of length len(param_values)
 Y_ra = model_ra.predict(param_values)
 Y_dec = model_dec.predict(param_values)
 
-# -----------------------------------------------------------------------------
 # 5. Compute Sobol' indices
-# -----------------------------------------------------------------------------
 
 print('RA Sobol indices')
 Si_ra = sobol.analyze(
@@ -254,9 +237,7 @@ Si_dec = sobol.analyze(
     print_to_console=True      # set False if you prefer to process Si yourself
 )
 
-# -----------------------------------------------------------------------------
 # 6. Inspect & use the results
-# -----------------------------------------------------------------------------
 
 # First‐order (main effect) indices
 S1_ra = Si_ra['S1']      # array of length D

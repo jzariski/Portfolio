@@ -1,11 +1,11 @@
 # Jackson Zariski Public Portfolio
 This is a portfolio of my previous projects, edited so that they can be shared in a public capacity.
 
-## telescope-acquisition-app
+## telescope-acquisition-app (FLIPoint GUI General Example)
 This is my machine-learning software for use by telescope operators to make real-time pointing corrections. 
 Written in Python with TensorFlow. Included a GUI built with Streamlit.
 
-## Telescope API
+## Telescope API (FLIPoint API General Example)
 An application of my ML pointing software using a Docker/Flask container framework.
 
 ## WordleBot

@@ -204,6 +204,8 @@ def train_and_evaluate(X_train, y_train, X_eval, y_eval, X_test, y_test):
 
 # Entry point
 
+## Test
+
 def main():
     with h5py.File(DATA_FILE, 'r') as hf:
         data =  hf['data'][:]

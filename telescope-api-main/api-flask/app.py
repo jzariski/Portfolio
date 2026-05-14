@@ -2,15 +2,9 @@
 """
 app.py
 
-Tiny Flask API on top of the existing pipeline.
-
-Endpoints:
-  POST /train   -> run load_out.py then booster.py (with JSON args)
-  POST /predict -> call predict.py with JSON args, return parsed results
-
-Both endpoints support an optional query parameter:
-  ?format=json  (default) → JSON response
-  ?format=text           → human-readable text summary
+Flask API gateway for the telescope pipeline.
+Offers `/train` and `/predict` endpoints that call the underlying CLI scripts
+and return structured JSON or plain text summaries.
 """
 
 import os

@@ -1,3 +1,6 @@
+# WordleAgent.py
+# Solver logic and model training support for the WordleBot project.
+# Uses either XGBoost or a small neural regressor to evaluate candidate words.
 import numpy as np
 import random
 from sklearn import linear_model
@@ -27,14 +30,13 @@ def get_letter_count(wordSet):
     return letter_count
 
 def train_regress(prob, NN=False):
-    ## Build training targets for the regressor. We map each guess string to
-    ## the *average remaining-candidate count* observed across many simulated states.
-    ## Predicting "expected remaining" is better aligned with fast Wordle solving
-    ## than maximizing "discards" and is numerically stable for regression.
+    # Build training targets from simulations.
+    # Each guess is mapped to the average remaining candidate count seen after that guess.
+    # Predicting the expected remaining pool gives the model a stable numeric target.
 
     dictionary = {}
 
-    ## Building the training set
+    # Gather a large set of simulated scoring examples.
     for i in range(10000):
         agent = WordleAgent()
         pairs = agent.problem_interface_get_info(prob)

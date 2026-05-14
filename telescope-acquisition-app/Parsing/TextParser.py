@@ -1,22 +1,12 @@
 #!/usr/bin/env python3
 """
-parse_to_h5.py
+TextParser.py
 
-Script to read a text file with a header indicating longitude/latitude,
-then a header row of column names, parse date/time and arbitrary data columns,
-convert booleans to floats, and save everything to an HDF5 file including
-column headers and metadata.
+Parser utility for telescope acquisition log files.
+Reads a file header with longitude/latitude metadata, then parses date/time
+columns and numeric observation data into a NumPy array.
 
-Usage:
-    python parse_to_h5.py input.txt output.h5 [--ymd]
-
-By default, the first two columns are assumed to be UNIX timestamps (in column 1)
-and ignored in column 2. With --ymd, first column must be YYYY-MM-DD and the
-second column must be HH:MM:SS.
-
-Important to note that there must be a header line, with first headings always containing:
-Date Time MountAz MountAlt ActualAz ActualAlt
-Following this are custom columns
+This parser supports both YMD timestamps and UNIX epoch-style inputs.
 """
 import argparse
 import sys

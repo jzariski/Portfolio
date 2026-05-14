@@ -1,40 +1,34 @@
-# Telescope API (FLASK VERSION)
+# Flask API for Telescope Prediction
 
-## Telescope API — Docker Quickstart
+A lightweight HTTP wrapper around the telescope pipeline.
+This folder contains a Docker-ready Flask service with `/train` and `/predict` endpoints.
 
-Predicts telescope pointing offsets from a Telescope historical observation log via an API. Flask Version  
+## Requirements
 
-### Requirements
+- Docker Desktop or Docker Engine
+- `curl` for local API testing
 
-- Docker Desktop (macOS/Windows) or Docker Engine (Linux)
-- Curl
+## Input data format
 
-### Input data format (training)
-
-Your training file is a whitespace-delimited text file whose **first six columns (in this exact order)** are:
+The same whitespace-delimited training format used by the core pipeline applies here.
+The first six columns must be:
 
 ```
 DATE-OBS     LST     obs-RA     obs-DEC     CRVAL1     CRVAL2
 ```
 
-- **DATE-OBS**: ISO date/time (e.g. `2025-05-09T04:26:12.247Z` or without `Z`)
-- **LST**: sidereal time (`HH:MM:SS[.sss]`)
-- **obs-RA**: pointing RA (`HH:MM:SS[.sss]`) — hours, no wrapping performed
-- **obs-DEC**: pointing Dec (`±DD:MM:SS[.ss]`)
-- **CRVAL1**: solv RA in **degrees**
-- **CRVAL2**: solv Dec in **degrees**
+- `DATE-OBS`: ISO date/time, for example `2025-05-09T04:26:12.247Z`
+- `LST`: sidereal time as `HH:MM:SS[.sss]`
+- `obs-RA`: observed RA in hours format
+- `obs-DEC`: observed Dec in degrees format
+- `CRVAL1`: solution RA in degrees
+- `CRVAL2`: solution Dec in degrees
 
-
-
-1) Open Docker and build the image
+## Build and run
 
 ```bash
 open -a "Docker"
-```
-
-```bash
 docker build -t Telescope-api-flask .
-
 docker run --rm -d \
   --name Telescope-api-flask \
   -p 5000:5000 \
@@ -42,9 +36,10 @@ docker run --rm -d \
   Telescope-api-flask
 ```
 
-Important: If used in the past it's a good idea to empty the logs and plots folder
+> If the container has been run before, clear the `logs/` and `plots/` folders for a clean start.
 
-2) Example call for training the model
+## Train endpoint example
+
 ```bash
 curl -X POST http://localhost:5000/train \
   -H "Content-Type: application/json" \
@@ -57,36 +52,10 @@ curl -X POST http://localhost:5000/train \
   }'
 ```
 
-OR to get a clean output
-```bash
-curl -X POST "http://localhost:5000/train?format=text" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "input_file": "data/2025_05_09.txt",
-    "min_dt": 60.0,
-    "to_cirs": true,
-    "sim_k": 0,
-    "eps": 0.1
-  }'
-```
+Use `?format=text` for a human-readable summary instead of JSON.
 
+## Predict endpoint example
 
-
-
-
-
-
-Arguments
-- -- input_file: Path to the txt file containing historical telemetry.
-- --min_dt: Default 0.0. Minimum time difference between successive points kept in training set.
-- --to_cirs: Default True. Converts solv to CIRS frame (assuming ICRS originally).
-- --sim_k: Default 0. Number of consecutive similar acquisition points to keep in traiing data.
-- --eps: Default 0.1. Defines similarity if sim > 0.
-
-
-3) Example call for predicting with the model
-Used to predict offset between obs and solv. Uses former predicted offsets as features, keeping track in 
-prediction_log.txt in the logs directory. Most recent entry is what is used, to restart, delete the txt file.
 ```bash
 curl -X POST http://localhost:5000/predict \
   -H "Content-Type: application/json" \
@@ -107,32 +76,18 @@ curl -X POST http://localhost:5000/predict \
   }'
 ```
 
+Use `?format=text` for plain text output from the same request.
 
-OR to get a clean output
+## Notes on training parameters
 
-```bash
-curl -X POST "http://localhost:5000/predict?format=text" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "year": 2025,
-    "month": 12,
-    "day": 15,
-    "hour": 8,
-    "minute": 30,
-    "second": 0,
-    "lst_hours": 5.75,
-    "obs_ra_deg": 123.456,
-    "obs_dec_deg": -20.0,
-    "lat-deg": 31.9583,
-    "lon-deg": -111.5986,
-    "elevation-m": 2400.0,
-    "log-file": "logs/prediction_log.txt"
-  }'
-```
+- `input_file`: path to the historical telemetry file
+- `min_dt`: minimum allowed time difference between successive samples
+- `to_cirs`: convert solution coordinates to CIRS frame
+- `sim_k`: number of similar consecutive observation points to retain
+- `eps`: similarity threshold for the `sim_k` filter
 
-4) Kill the container
+## Stop and remove the container
+
 ```bash
 docker rm -f Telescope-api-flask
 ```
-
-

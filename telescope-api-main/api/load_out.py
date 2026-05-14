@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
+"""
+load_out.py
 
-## Hi
+Converts raw telescope observation logs into a cleaned HDF5 dataset.
+This step parses timestamps, converts coordinate formats, and optionally filters
+out data that is too close in time or too similar in pointing.
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py

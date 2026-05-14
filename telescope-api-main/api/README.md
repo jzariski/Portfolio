@@ -1,117 +1,65 @@
-# Telescope API
+# Telescope API Pipeline
 
-## Telescope API — Docker Quickstart
+A command-line toolchain for telescope pointing offset prediction and model exploration.
+This readme covers the `api/` folder, which includes data parsing, training, sensitivity analysis, and prediction.
 
-Predicts telescope pointing offsets from a Telescope historical observation log via an API.  
-
-### Requirements
-
-- Docker Desktop (macOS/Windows) or Docker Engine (Linux)
-
-### Project layout
+## Project structure
 
 ```
 .
-├── load_out.py          # Step 1: parse raw logs → HDF5
-├── booster.py           # Step 2: train XGB models, save models + plots
-├── Sobol.py             # Step 3: Sobol sensitivity analysis (SALib)
-├── predict.py           # Step 4: repeated predictions using trained models
-├── Dockerfile
-├── data/                # raw input logs + generated data.h5
-├── models/              # model_ra.json, model_dec.json
-├── logs/                # Sobol output, prediction logs
-└── plots/               # CDF and other diagnostic plots
+├── load_out.py          # parse raw log text into usable HDF5 training data
+├── booster.py           # train models and save model artifacts + diagnostics
+├── Sobol.py             # run Sobol sensitivity analysis
+├── predict.py           # predict observations from saved models
+├── Dockerfile           # container recipe for the API service
+├── data/                # raw input and generated HDF5
+├── models/              # saved model artifacts and JSON models
+├── logs/                # prediction logs and Sobol outputs
+└── plots/               # diagnostic plots and CDF visualizations
 ```
 
-### Input data format (training)
+## Training data format
 
-Your training file is a whitespace-delimited text file whose **first six columns (in this exact order)** are:
+The training file should be whitespace-delimited and begin with a header row.
+The first six columns must be:
 
 ```
 DATE-OBS     LST     OBS-RA     OBS-DEC     CRVAL1     CRVAL2
 ```
 
-- **DATE-OBS**: ISO date/time (e.g. `2025-05-09T04:26:12.247Z` or without `Z`)
-- **LST**: sidereal time (`HH:MM:SS[.sss]`)
-- **OBS-RA**: pointing RA (`HH:MM:SS[.sss]`) — hours, no wrapping performed
-- **OBS-DEC**: pointing Dec (`±DD:MM:SS[.ss]`)
-- **CRVAL1**: SOLV RA in **degrees**
-- **CRVAL2**: SOLV Dec in **degrees**
+- `DATE-OBS`: ISO date/time, for example `2025-05-09T04:26:12.247Z`
+- `LST`: sidereal time as `HH:MM:SS[.sss]`
+- `OBS-RA`: observed RA in hours format
+- `OBS-DEC`: observed Dec in degrees format
+- `CRVAL1`: solution RA in degrees
+- `CRVAL2`: solution Dec in degrees
 
-
----
-
-
-
-# 1) Open Docker and build the image
+## Quick start
 
 ```bash
-open -a "Docker"
-```
-
-```bash
-docker build -t Telescope-api .
-```
-
-Important: If used in the past it's a good idea to empty the logs and plots folder
-
-# 2) Keeps outputs on the host machine
-
-```bash
-docker run -it --rm -v "$PWD":/app Telescope-api
-```
-
-# 3.1) Format Data
-
-This takes your text file 'file_path' and transforms it into a useable h5 file stored in the data directory
-
-```bash
-python load_out --input 'file_path'
-```
-Other Arguments
-- --dt: Default 0.0. Minimum time difference between successive points kept in training set.
-- --toCIRS: Default True. Converts SOLV to CIRS frame (assuming ICRS originally).
-- --sim: Default 0. Number of consecutive similar acquisition points to keep in traiing data.
-- --eps: Default 0.1. Defines similarity if sim > 0.
-
-
-# 3.2) Trains an RA/Dec Model
-
-Right now we've chosen the specs of the model for you. We're adding in ways that the user can change it soon
-This model is trained to predict the offset between OBS RA/DEC and SOLV (CRVAL) RA/DEC
-
-```bash
+python load_out.py --input data/your_observations.txt
 python booster.py
+python predict.py --year 2025 --month 5 --day 9 --hour 4 --minute 26 --second 0 \
+  --lst-hours 5.25 --OBS-ra-deg 123.456 --OBS-dec-deg -20.000 \
+  --lat-deg 31.9583 --lon-deg -111.5986
 ```
 
-# 3.3) Optional Sobol Analysis (Output in logs)
+## Command-line options
 
-Optional variance analysis for feature engineering. Sobol analysis output in logs directory
+- `--dt`: minimum spacing in seconds between retained rows
+- `--toCIRS`: transform solution coordinates to CIRS frame before training
+- `--sim`: retain only the first `K` similar consecutive acquisitions
+- `--eps`: similarity threshold for the `--sim` filter
 
+## Recommended workflow
 
-```bash
-python Sobol.py
-```
+1. Run `load_out.py` to create `data/data.h5` from raw logs.
+2. Run `booster.py` to train models and save artifacts.
+3. Optionally run `Sobol.py` for feature sensitivity insight.
+4. Run `predict.py` to generate predictions from the trained models.
 
-# 4) Predict
+## Notes for reviewers
 
-Used to predict offset between OBS and SOLV. Uses former predicted offsets as features, keeping track in 
-prediction_log.txt in the logs directory. Most recent entry is what is used, to restart, delete the txt file.
-
-```bash
-python predict.py \
-  --year int \
-  --month int \
-  --day int \
-  --hour int \
-  --minute int \
-  --second int \
-  --lst-hours float \
-  --OBS-ra-deg float \
-  --OBS-dec-deg float \
-  --lat-deg float \
-  --lon-deg float \
-  --elevation-m float \
-  --models-dir (Default) models \
-  --log-file (Default) prediction_log.txt
-```
+- This repository separates parsing, modeling, analysis, and inference cleanly.
+- It is built to demonstrate applied telescope data processing and model deployment.
+- Output folders are kept isolated so artifacts are easy to inspect.

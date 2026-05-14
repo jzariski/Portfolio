@@ -7,16 +7,15 @@ import xgboost as xgb
 import matplotlib.pyplot as plt
 import tensorflow as tf
 
+# Neural-network variant of the FLI-Point trainer.
+# Intended to be an alternate model path to the XGBoost version.
 class ModelBuilderNN:
-    
-    '''
-    Creates the Neural Network Model with desired parameters
-    STILL NEED TO DECIDE HOW TO ACCEPT PARAMS
-    For now params will just be [estimators, max_depth]
+    """
+    Neural network model trainer for telescope pointing offsets.
 
-    Returns tuple of (XGBoost Model, lat lon)?
-
-    '''
+    Uses a small dense network to learn offset predictions from the same
+    feature set as the XGBoost pipeline.
+    """
 
     def __init__(self, params, data, title, extraAugments=True):
         """
@@ -43,7 +42,7 @@ class ModelBuilderNN:
 
         self.preds = None
 
-    # Note input should be sorted in advance!!!
+    # Input must be chronologically sorted before augmentation.
     def _augmentData(self, sortedData):
 
         currData = np.copy(sortedData)

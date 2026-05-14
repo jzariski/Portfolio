@@ -1,3 +1,6 @@
+# WordleProblem.py
+# Defines the Wordle simulation environment used to test the WordleBot solver.
+# Includes answer generation, guess validation, and feedback encoding.
 import numpy as np
 import random
 import WordleAgent as wa
@@ -25,6 +28,9 @@ class WordleProblem():
         return guess == self.answer
     
     def get_information(self, guess):
+        # Return the Wordle-style feedback for a guess.
+        # green_tuples = exact matches, yellow_tuples = present but misplaced,
+        # grey_letters = letters not in the answer at all.
         if self.isCorrect(guess):
             print(guess + ' is the correct answer!')
         else:

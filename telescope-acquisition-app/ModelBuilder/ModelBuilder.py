@@ -6,16 +6,16 @@ from datetime import datetime, timezone
 import xgboost as xgb
 import matplotlib.pyplot as plt
 
+# This is the XGBoost-based training helper for the FLI-Point pipeline.
+# It handles feature augmentation, temporal splits, model creation, and evaluation.
 class ModelBuilder:
-    
-    '''
-    Creates the XGBoost Model with desired parameters
-    STILL NEED TO DECIDE HOW TO ACCEPT PARAMS
-    For now params will just be [estimators, max_depth]
+    """
+    XGBoost model trainer for telescope pointing offsets.
 
-    Returns tuple of (XGBoost Model, lat lon)?
-
-    '''
+    This class accepts training parameters, raw time-series observational data,
+    and optional augmentation flags. It produces a fitted regressor and
+    diagnostic outputs for error statistics and CDF visualization.
+    """
 
     def __init__(self, params, data, title, extraAugments=True):
         """
@@ -42,7 +42,7 @@ class ModelBuilder:
 
         self.preds = None
 
-    # Note input should be sorted in advance!!!
+    # Input must be chronologically sorted before augmentation.
     def _augmentData(self, sortedData):
 
         currData = np.copy(sortedData)

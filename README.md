@@ -1,16 +1,15 @@
-# Jackson Zariski Public Portfolio
-This is a portfolio of my previous projects, edited so that they can be shared in a public capacity.
+# Jackson Zariski Portfolio
+A curated collection of software prototypes, machine-learning experiments, and telescope automation tools.
 
-## telescope-acquisition-app (FLIPoint GUI General Example)
-This is my machine-learning software for use by telescope operators to make real-time pointing corrections. 
-Written in Python with TensorFlow. Included a GUI built with Streamlit.
+## FLI-Point Telescope Acquisition Trainer
+A Streamlit-based training workflow for telescope acquisition models, designed to help operators upload observation logs, train a pointing correction model, and inspect evaluation results.
 
-## Telescope API (FLIPoint API General Example)
-An application of my ML pointing software using a Docker/Flask container framework.
+## Telescope API Container
+A Docker-friendly API wrapper for the FLI-Point prediction pipeline, including data ingestion, model training, and prediction endpoints.
 
-## WordleBot
-This is a side project of mine where I built a machine-learning optimizer to try and solve the Wordle in the fewest guesses.
-Built a deep feed-forward network taking advantage of tokenization to prescribe utility scores to words.
+## WordleBot Solver
+A machine-learning Wordle experiment using both regression and neural model approaches to propose strong candidate words and evaluate solver performance.
 
-## TelQueue
-An in-progress framework for using mixed-integer programming to optimize telescope queues for a given night. 
+## TelQueue Scheduler Prototype
+An early-stage mixed-integer programming framework for building optimized telescope observing queues from nightly constraints.
+

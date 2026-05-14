@@ -1,3 +1,6 @@
+# FILE: app.py — Streamlit dashboard for the FLI-Point model trainer
+# This module presents a simple workflow for uploading telescope logs,
+# training a pointing correction model, and reviewing prediction results.
 import streamlit as st
 import numpy as np
 from ModelBuilder import ModelBuilder

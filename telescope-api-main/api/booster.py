@@ -1,26 +1,41 @@
 #!/usr/bin/env python3
 """
-prepare_and_train_xgb.py
+booster.py
 
-1) Load and sort the HDF5‐saved array (year,month,day,hour,minute,second,
+1) Load and sort the HDF5-saved array (year,month,day,hour,minute,second,
    lst_hours, obs_ra_deg, obs_dec_deg, solv_ra_deg, solv_dec_deg).
 2) Split chronologically into train(70%), eval(10%), test(20%).
-3) Build X (all columns except solv RA/Dec) and y = [obs−solv].
-4) Define and train two XGBRegressors (one for RA‐offset, one for DEC‐offset).
+3) Build autoregressive X and y = [obs - solv].
+4) Define and train two XGBRegressors (one for RA-offset, one for DEC-offset).
 5) Predict on test, then plot & save true vs. predicted offsets.
 """
 
-import sys
 import argparse
-from datetime import datetime, timezone
+import os
+from pathlib import Path
 
 import numpy as np
 import h5py
 import xgboost as xgb
+
+# Keep Matplotlib cache writes inside the project/sandbox when the user home
+# directory is not writable.
+Path("plots").mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(Path("plots") / ".matplotlib"))
 import matplotlib.pyplot as plt
 
 
-DATA_FILE = 'data/data.h5'
+DATA_FILE = "data/data.h5"
+MODELS_DIR = Path("models")
+PLOTS_DIR = Path("plots")
+
+FEATURE_NAMES = (
+    "year", "month", "day",
+    "hour", "minute", "second",
+    "lst_hours",
+    "obs_ra_deg", "obs_dec_deg",
+    "previous_acq_error_ra", "previous_acq_error_dec",
+)
 
 # 1) Load & sort utilities
 
@@ -39,71 +54,60 @@ def sort_by_datetime(data):
     idx = np.lexsort((secs, mins, hours, days, months, years))
     return data[idx]
 
-# 2) Split into train/eval/test
-
-def split_time_series(data, train_frac=0.7, eval_frac=0.1):
-    """
-    Chronologically split:
-      - first train_frac → train
-      - next eval_frac  → eval
-      - remainder       → test
-    """
-    N = len(data)
-    i_train = int(N * train_frac)
-    i_eval  = i_train + int(N * eval_frac)
-    return data[:i_train], data[i_train:i_eval], data[i_eval:]
-
-# 3) Build X/y
-
-## Reminder of what the feature matrix looks like
-'''
- data = np.column_stack([
-        cols['years'], cols['months'], cols['days'],
-        cols['hours'], cols['minutes'], cols['seconds'],
-        cols['lst'], cols['obs_ra'], cols['obs_dec'],
-        cols['solv_ra'], cols['solv_dec']
-    ])
-'''
-
-
 def make_features_and_labels(split_data):
     """
-    Inputs X: all columns except the last two (solv RA/Dec).
+    Build model inputs and labels in the same order used by predict.py.
+
+    Inputs X:
+      year, month, day, hour, minute, second,
+      lst_hours, obs_ra_deg, obs_dec_deg,
+      previous_acq_error_ra, previous_acq_error_dec
+
     Labels y: shape (M,2) = [obs_RA - solv_RA, obs_DEC - solv_DEC].
+
+    The final two input columns make the model autoregressive: every row gets
+    the previous acquisition's true pointing error. At inference time
+    predict.py uses the previous predicted error from the log as the available
+    proxy for that same information.
+
     Column indices:
        7:obs_RA  8:obs_DEC  9:solv_RA  10:solv_DEC
     """
-    
-    X = split_data[:, [0,1,2,3,4,5,6,7,8]]
-    
-    obs_ra, obs_dec = split_data[:,7], split_data[:,8]
-    
-    solv_ra, solv_dec = split_data[:,9], split_data[:,10]
+    base_features = split_data[:, [0, 1, 2, 3, 4, 5, 6, 7, 8]]
 
-    
-    
-    previous_acq_error_ra, previous_acq_error_dec = (obs_ra - solv_ra), (obs_dec - solv_dec)
-    previous_acq_error_ra, previous_acq_error_dec = np.roll(previous_acq_error_ra, 1), np.roll(previous_acq_error_dec,1)
-    previous_acq_error_ra[0] = 0
-    previous_acq_error_dec[0] = 0
-    
-    
+    obs_ra, obs_dec = split_data[:, 7], split_data[:, 8]
+    solv_ra, solv_dec = split_data[:, 9], split_data[:, 10]
 
-    X = np.column_stack([X, previous_acq_error_ra, previous_acq_error_dec])
+    current_error_ra = obs_ra - solv_ra
+    current_error_dec = obs_dec - solv_dec
+
+    previous_error_ra = np.roll(current_error_ra, 1)
+    previous_error_dec = np.roll(current_error_dec, 1)
+    previous_error_ra[0] = 0.0
+    previous_error_dec[0] = 0.0
+
+    X = np.column_stack([base_features, previous_error_ra, previous_error_dec])
     y = np.column_stack([obs_ra - solv_ra, obs_dec - solv_dec])
-    
-    
-    '''
-    ### What X looks like
-    data = np.column_stack([
-        years, months, days,
-        hours, minutes, seconds,
-        lst_hours,
-        obs_ra_deg, obs_dec_deg,
-        previous_acq_error_ra, previous_acq_error_dec,
-    ])
-    '''
     return X, y
+
+
+def split_features_and_labels(X, y, train_frac=0.7, eval_frac=0.1):
+    """
+    Split already-built autoregressive features chronologically.
+
+    Building X before this split preserves the true previous acquisition at
+    the train/eval/test boundaries. Resetting previous_error to zero at each
+    split would weaken the autoregressive behavior exactly where evaluation
+    begins.
+    """
+    n_rows = len(X)
+    i_train = int(n_rows * train_frac)
+    i_eval = i_train + int(n_rows * eval_frac)
+    return (
+        X[:i_train], y[:i_train],
+        X[i_train:i_eval], y[i_train:i_eval],
+        X[i_eval:], y[i_eval:],
+    )
 
 # 4) XGBoost training & plotting (with save)
 
@@ -138,8 +142,10 @@ def train_and_evaluate(X_train, y_train, X_eval, y_eval, X_test, y_test):
         verbose=False
     )
     
-    model_ra.get_booster().save_model("models/model_ra.json")
-    model_dec.get_booster().save_model("models/model_dec.json")
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    model_ra.save_model(str(MODELS_DIR / "model_ra.json"))
+    model_dec.save_model(str(MODELS_DIR / "model_dec.json"))
     
     
     # Predict on test set
@@ -150,19 +156,19 @@ def train_and_evaluate(X_train, y_train, X_eval, y_eval, X_test, y_test):
     err_ra  = np.abs(ra_pred  - y_test[:, 0])
     err_dec = np.abs(dec_pred - y_test[:, 1])
     
-    # --- compute true‐value magnitudes ---
+    # --- compute true-value magnitudes ---
     mag_ra  = np.abs(y_test[:, 0])
     mag_dec = np.abs(y_test[:, 1])
     
 
- # print RA stats ---
+    # Print RA stats.
     print("=== RA Offset Performance ===")
     print(f"Median absolute offset prediction error RA (Arcsec)     : {np.median(err_ra)*3600:.4f} arcsec")
     print(f"90th-percentile offset prediction error RA (Arcsec) : {np.percentile(err_ra, 90)*3600:.4f} arcsec")
     print(f"Median magnitude of obs-solv RA (Arcsec)      : {np.median(mag_ra)*3600:.4f} arcsec")
     print(f"90th-percentile of obs-solv RA (Arcsec).  : {np.percentile(mag_ra, 90)*3600:.4f} arcsec\n")
     
-    # print DEC stats ---
+    # Print Dec stats.
     print("=== DEC Offset Performance ===")
     print(f"Median absolute offset prediction error Dec (Arcsec)      : {np.median(err_dec)*3600:.4f} arcsec")
     print(f"90th-percentile offset prediction error Dec (Arcsec) : {np.percentile(err_dec, 90)*3600:.4f} arcsec")
@@ -170,19 +176,13 @@ def train_and_evaluate(X_train, y_train, X_eval, y_eval, X_test, y_test):
     print(f"90th-percentile of obs-solv Dec (Arcsec)  : {np.percentile(mag_dec, 90)*3600:.4f} arcsec")
 
     # Plot and save RA offsets ---
-    plt.figure(figsize=(15,10))
-    plt.suptitle('Offsets on Test Set')
-    plt.subplot(1,2,1)
-    
-    
-    
-    ## CDF Plotting
+    # CDFs show whether the model improves over simply applying no correction.
     plt.figure(figsize=(15,10))
     plt.suptitle('CDF of Error in Predicting Offset')
     plt.subplot(1,2,1)
     eps = 1e-10
-    plt.hist(np.log10(abs(mag_ra) + eps), bins=1000, density=True, cumulative=True, histtype='step', label='Offset RA')
-    plt.hist(np.log10(abs(err_ra) + eps), bins=1000, density=True, cumulative=True, histtype='step', label='Error in Predicting Offset RA')
+    plt.hist(np.log10(np.abs(mag_ra) + eps), bins=1000, density=True, cumulative=True, histtype='step', label='Offset RA')
+    plt.hist(np.log10(np.abs(err_ra) + eps), bins=1000, density=True, cumulative=True, histtype='step', label='Error in Predicting Offset RA')
     plt.title('CDF of Log Absolute Error in RA Offset')
     plt.xlabel('Log Absolute Error (Degrees)')
     plt.ylabel('Percentage of Points')
@@ -191,15 +191,22 @@ def train_and_evaluate(X_train, y_train, X_eval, y_eval, X_test, y_test):
     
     plt.subplot(1,2,2)
     eps = 1e-10
-    plt.hist(np.log10(abs(mag_dec) + eps), bins=1000, density=True, cumulative=True, histtype='step', label='Offset Dec')
-    plt.hist(np.log10(abs(err_dec) + eps), bins=1000, density=True, cumulative=True, histtype='step', label='Error in Predicting Offset Dec')
+    plt.hist(np.log10(np.abs(mag_dec) + eps), bins=1000, density=True, cumulative=True, histtype='step', label='Offset Dec')
+    plt.hist(np.log10(np.abs(err_dec) + eps), bins=1000, density=True, cumulative=True, histtype='step', label='Error in Predicting Offset Dec')
     plt.title('CDF of Log Absolute Error in Dec Offset')
     plt.xlabel('Log Absolute Error (Degrees)')
     plt.ylabel('Percentage of Points')
     plt.xlim([-5,-1.5])
     plt.legend()
 
-    plt.savefig('plots/cdf.png', dpi=150)  # save to PNG
+    plt.tight_layout()
+    plt.savefig(PLOTS_DIR / "cdf.png", dpi=150)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train autoregressive XGBoost pointing-offset models.")
+    parser.add_argument("--data-file", default=DATA_FILE, help=f"HDF5 file from load_out.py (default: {DATA_FILE})")
+    return parser.parse_args()
 
 
 # Entry point
@@ -207,20 +214,14 @@ def train_and_evaluate(X_train, y_train, X_eval, y_eval, X_test, y_test):
 ## Test
 
 def main():
-    with h5py.File(DATA_FILE, 'r') as hf:
-        data =  hf['data'][:]
-        
+    args = parse_args()
+    data = load_data(args.data_file)
     data = sort_by_datetime(data)
-    
+
+    # Build autoregressive features once over the full chronological sequence.
+    # This preserves previous acquisition context across split boundaries.
     X, y = make_features_and_labels(data)
-
-    # Split
-    train_data, eval_data, test_data = split_time_series(data)
-
-    # Build X/y
-    X_train, y_train = make_features_and_labels(train_data)
-    X_eval,  y_eval  = make_features_and_labels(eval_data)
-    X_test,  y_test  = make_features_and_labels(test_data)
+    X_train, y_train, X_eval, y_eval, X_test, y_test = split_features_and_labels(X, y)
 
     # Show shapes
     print(f"Train:  X={X_train.shape}, y={y_train.shape}")

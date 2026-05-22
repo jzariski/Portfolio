@@ -1,0 +1,33 @@
+Data shape: (751, 11)
+Feature matrix shape: (751, 11)
+Mean absolute RA offset in dataset: 0.05039085 deg
+Mean absolute Dec offset in dataset: 0.04048463 deg
+
+Warning: year is constant at 2026.0; expanding bounds slightly.
+Warning: month is constant at 1.0; expanding bounds slightly.
+RA Sobol indices
+                    year | S1 = 0.0000 +/- 0.0000 | ST = 0.0000 +/- 0.0000
+                   month | S1 = 0.0000 +/- 0.0000 | ST = 0.0000 +/- 0.0000
+                     day | S1 = 0.0000 +/- 0.0000 | ST = 0.0000 +/- 0.0000
+                    hour | S1 = 0.0000 +/- 0.0000 | ST = 0.0000 +/- 0.0000
+                  minute | S1 = -0.0368 +/- 0.0522 | ST = 0.0140 +/- 0.0244
+                  second | S1 = -0.0154 +/- 0.0439 | ST = 0.0047 +/- 0.0046
+               lst_hours | S1 = 0.0813 +/- 0.2514 | ST = 0.1684 +/- 0.1550
+              obs_ra_deg | S1 = 0.0496 +/- 0.2667 | ST = 0.2768 +/- 0.2853
+             obs_dec_deg | S1 = -0.1338 +/- 0.1059 | ST = 0.0457 +/- 0.0505
+   previous_acq_error_ra | S1 = 0.2369 +/- 0.3096 | ST = 0.4003 +/- 0.4779
+  previous_acq_error_dec | S1 = 0.0302 +/- 0.0862 | ST = 0.0153 +/- 0.0141
+
+Dec Sobol indices
+                    year | S1 = 0.0000 +/- 0.0000 | ST = 0.0000 +/- 0.0000
+                   month | S1 = 0.0000 +/- 0.0000 | ST = 0.0000 +/- 0.0000
+                     day | S1 = 0.0000 +/- 0.0000 | ST = 0.0000 +/- 0.0000
+                    hour | S1 = 0.0000 +/- 0.0000 | ST = 0.0000 +/- 0.0000
+                  minute | S1 = -0.0075 +/- 0.0138 | ST = 0.0002 +/- 0.0004
+                  second | S1 = -0.0197 +/- 0.0297 | ST = 0.0026 +/- 0.0029
+               lst_hours | S1 = 0.3142 +/- 0.2066 | ST = 0.2579 +/- 0.0986
+              obs_ra_deg | S1 = 0.1018 +/- 0.1705 | ST = 0.0996 +/- 0.0443
+             obs_dec_deg | S1 = 0.0147 +/- 0.0424 | ST = 0.0110 +/- 0.0087
+   previous_acq_error_ra | S1 = -0.0687 +/- 0.1021 | ST = 0.0255 +/- 0.0190
+  previous_acq_error_dec | S1 = 0.4450 +/- 0.2757 | ST = 0.2812 +/- 0.1277
+

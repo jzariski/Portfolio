@@ -7,40 +7,51 @@ This step parses timestamps, converts coordinate formats, and optionally filters
 out data that is too close in time or too similar in pointing.
 """
 import numpy as np
-import matplotlib.pyplot as plt
 import h5py
 from datetime import datetime, timezone
 from astropy.time import Time
 from astropy.coordinates import SkyCoord, CIRS
 import astropy.units as u
 import argparse
+from pathlib import Path
 
 
-# Enable/disable time-gap filtering and threshold (seconds)
-# Enable/disable similarity filtering and parameters:
-# keep only the first SIM_K acquisitions whose obs-RA/Dec change is < EPSILON
-# Which row index to sample for verbose inspection
-SAMPLE_INDEX = 0
-# Output filenames
-OUTPUT_H5 = 'data/data.h5'
+# Parsed rows are stored in this fixed column order. The training and
+# prediction code depends on these indices, so keep this list as the source of
+# truth when changing the dataset schema.
+COLUMN_NAMES = (
+    "year", "month", "day",
+    "hour", "minute", "second",
+    "lst_hours", "obs_ra_deg", "obs_dec_deg",
+    "solv_ra_deg", "solv_dec_deg",
+)
+OUTPUT_H5 = "data/data.h5"
 
 
-# python load_out.py --input 'data/2025_05_09.txt' --dt 60 --toCIRS 
+# Example:
+# python load_out.py --input data/data.dat --dt 60 --toCIRS
 
 
 def get_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Parse raw telescope logs into data/data.h5 for model training."
+    )
 
-    parser.add_argument("--input", type=str, required=True)
-    parser.add_argument("--dt", type=float, default=0.0)
-    parser.add_argument("--toCIRS", action="store_true")
-    parser.add_argument("--sim", type=int, default=0)
-    parser.add_argument("--eps", type=float, default=0.1)
+    parser.add_argument("--input", type=str, required=True, help="Raw whitespace-delimited observation log")
+    parser.add_argument("--dt", type=float, default=0.0, help="Minimum seconds between retained rows")
+    parser.add_argument("--toCIRS", action="store_true", help="Transform solved RA/Dec from ICRS to CIRS")
+    parser.add_argument("--sim", type=int, default=0, help="Keep only the first K consecutive similar pointings")
+    parser.add_argument("--eps", type=float, default=0.1, help="Similarity threshold in degrees for --sim")
 
     return parser.parse_args()
 
 def parse_iso_datetime(dt_str):
-    dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S.%f")
+    # Some logs include a trailing "Z" for UTC and some do not.
+    cleaned = dt_str.rstrip("Z")
+    try:
+        dt = datetime.strptime(cleaned, "%Y-%m-%dT%H:%M:%S.%f")
+    except ValueError:
+        dt = datetime.strptime(cleaned, "%Y-%m-%dT%H:%M:%S")
     return dt.replace(tzinfo=timezone.utc)
 
 def hms_to_hours(hms_str):
@@ -59,40 +70,37 @@ def convert(arr, trans):
     newArr = np.copy(arr)
     if not trans:
         return newArr
-    else:
-        # Create SkyCoord for all rows
-        coords_icrs = SkyCoord(ra=arr[:,9]*u.deg,
-                               dec=arr[:,10]*u.deg,
-                               frame='icrs')
-    
-        years, months, days, hours, minutes, seconds = [arr[:,i].astype(int) for i in range(6)]
-    
-        times = Time(
-            {
-                'year'  : years,
-                'month' : months,
-                'day'   : days,
-                'hour'  : hours,
-                'minute': minutes,
-                'second': seconds
-            },
-            format='ymdhms',
-            scale='utc'
-        )
-        # Transform to apparent (CIRS)
-        coords_app = coords_icrs.transform_to(CIRS(obstime=times))
-    
-        # Add apparent coordinates to DataFrame
-        ra_app = coords_app.ra.deg
-        dec_app = coords_app.dec.deg
-    
-        newArr[:,9] = ra_app
-        newArr[:,10] = dec_app
-    
-        return newArr
+
+    # Transform the solved coordinates into the apparent CIRS frame at each
+    # observation time. The observed coordinates are left unchanged because the
+    # raw log already represents the telescope command/pointing.
+    coords_icrs = SkyCoord(
+        ra=arr[:, 9] * u.deg,
+        dec=arr[:, 10] * u.deg,
+        frame="icrs",
+    )
+
+    years, months, days, hours, minutes, seconds = [arr[:, i].astype(int) for i in range(6)]
+    times = Time(
+        {
+            "year": years,
+            "month": months,
+            "day": days,
+            "hour": hours,
+            "minute": minutes,
+            "second": seconds,
+        },
+        format="ymdhms",
+        scale="utc",
+    )
+    coords_app = coords_icrs.transform_to(CIRS(obstime=times))
+
+    newArr[:, 9] = coords_app.ra.deg
+    newArr[:, 10] = coords_app.dec.deg
+    return newArr
 
 def load_out_file(filename):
-    raw_lines = []  # keep for sample inspection
+    raw_lines = []  # Keep original lines so filtered-row reporting stays traceable.
     cols = { 'years':[], 'months':[], 'days':[],
              'hours':[], 'minutes':[], 'seconds':[],
              'lst':[], 'obs_ra':[], 'obs_dec':[], 'solv_ra':[], 'solv_dec':[] }
@@ -100,7 +108,8 @@ def load_out_file(filename):
     with open(filename, 'r') as f:
         for line in f:
             line = line.strip()
-            # skip blank and header lines
+            # Skip blank/header lines and any malformed rows instead of failing
+            # the entire import on one bad acquisition record.
             if not line or line.startswith(('1m0a','Longitude','DATE-OBS')):
                 continue
             parts = line.split()
@@ -132,31 +141,37 @@ def load_out_file(filename):
 
 def sort_chrono(raw_lines, data):
     """Sort observations by date/time ascending."""
-    # lexsort with keys in reverse order
+    # np.lexsort receives keys from least significant to most significant.
     idx = np.lexsort(( data[:,5], data[:,4], data[:,3],
                        data[:,2], data[:,1], data[:,0] ))
     return [raw_lines[i] for i in idx], data[idx]
 
 
 def filter_by_dt(raw_lines, data, min_dt):
-    """Remove entries whose Δt from previous is ≤ min_dt seconds."""
-    # compute UNIX timestamps
-    ts = []
-    for r in data:
-        y,m,d,h,mi,s = r[:6]
-        dt = datetime(int(y),int(m),int(d),int(h),int(mi),int(s), tzinfo=timezone.utc)
-        ts.append(dt.timestamp())
-    ts = np.array(ts)
+    """Remove entries whose time since the previous row is <= min_dt seconds."""
+    # Build timestamps with fractional seconds preserved; these are sorted
+    # already, so a vectorized diff is enough.
+    ts = np.array([
+        datetime(
+            int(y),
+            int(m),
+            int(d),
+            int(h),
+            int(mi),
+            int(s),
+            int((s % 1) * 1_000_000),
+            tzinfo=timezone.utc,
+        ).timestamp()
+        for y, m, d, h, mi, s in data[:, :6]
+    ])
     mask = np.ones(len(ts), dtype=bool)
-    for i in range(1,len(ts)):
-        if ts[i] - ts[i-1] <= min_dt:
-            mask[i] = False
+    mask[1:] = np.diff(ts) > min_dt
     removed = np.count_nonzero(~mask)
     return ([raw_lines[i] for i in range(len(raw_lines)) if mask[i]], data[mask], removed)
 
 
 def filter_by_similarity(raw_lines, data, K, eps):
-    """Keep only first K points with Δobs-RA/Dec < eps; drop others."""
+    """Keep only the first K consecutive rows with similar observed RA/Dec."""
     keep = [True]
     sim_count = 0
     for i in range(1,len(data)):
@@ -176,36 +191,28 @@ def filter_by_similarity(raw_lines, data, K, eps):
 def main():
     args = get_args()
 
-    INPUT_FILE = args.input
-    MIN_DT = args.dt
-    ENABLE_TIME_FILTER = False
-    if MIN_DT > 0:
-        ENABLE_TIME_FILTER = True
-    TRANSFORM_TO_CIRS = args.toCIRS
-
-    SIM_K = args.sim
-    ENABLE_SIM_FILTER = False
-    if SIM_K > 0:
-        ENABLE_SIM_FILTER = True
-    EPSILON = args.eps
+    enable_time_filter = args.dt > 0
+    enable_sim_filter = args.sim > 0
 
     # 1) Load & parse
-    raw, data = load_out_file(INPUT_FILE)
+    raw, data = load_out_file(args.input)
     # 2) Sort
     raw, data = sort_chrono(raw, data)
     print(f"Sorted {len(data)} observations.")
     # 3) Optional filters
-    if ENABLE_TIME_FILTER:
-        raw, data, rem = filter_by_dt(raw, data, MIN_DT)
-        print(f"Time filter removed {rem} rows (Δt ≤ {MIN_DT}s).")
-    if ENABLE_SIM_FILTER:
-        raw, data, rem = filter_by_similarity(raw, data, SIM_K, EPSILON)
-        print(f"Similarity filter removed {rem} rows (beyond first {SIM_K} within ε={EPSILON}°).")
-    # 4) Sample inspection
-    print(data.shape)
-    data = convert(data, TRANSFORM_TO_CIRS)
-    print(data.shape)
+    if enable_time_filter:
+        raw, data, rem = filter_by_dt(raw, data, args.dt)
+        print(f"Time filter removed {rem} rows (delta_t <= {args.dt}s).")
+    if enable_sim_filter:
+        raw, data, rem = filter_by_similarity(raw, data, args.sim, args.eps)
+        print(f"Similarity filter removed {rem} rows (beyond first {args.sim} within eps={args.eps} deg).")
+
+    # 4) Optional coordinate-frame conversion
+    data = convert(data, args.toCIRS)
+    print(f"Final dataset shape: {data.shape} columns={COLUMN_NAMES}")
+
     # 5) Save outputs
+    Path(OUTPUT_H5).parent.mkdir(parents=True, exist_ok=True)
     with h5py.File(OUTPUT_H5, 'w') as hf:
         hf.create_dataset('data', data=data, compression='gzip')
     print(f"Saved HDF5: {OUTPUT_H5}")

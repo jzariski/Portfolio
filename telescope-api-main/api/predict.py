@@ -21,7 +21,8 @@ Log format (whitespace-separated, one prediction per line):
 
 import argparse
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 import xgboost as xgb
@@ -65,10 +66,15 @@ def read_previous_from_log(log_path: str):
         # 4: dec_offset_pred
         # 5: obs_ra
         # 6: obs_dec
+        if len(parts) < 7:
+            return 0.0, 0.0
 
         ra_offset_pred = float(parts[3])
         dec_offset_pred = float(parts[4])
 
+        # During live prediction the true solved coordinates are not known yet.
+        # The best available autoregressive feature is therefore the previous
+        # prediction, stored as the previous acquisition error proxy.
         previous_acq_error_ra = ra_offset_pred
         previous_acq_error_dec = dec_offset_pred
 
@@ -94,13 +100,16 @@ def append_to_log(
     Line format:
       timestamp_iso  SOLV_ra_deg  SOLV_dec_deg  ra_offset_pred  dec_offset_pred  obs_ra  obs_dec
     """
-    timestamp = datetime.utcnow().isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat()
     line = (
         f"{timestamp} "
         f"{SOLV_ra_deg:.10f} {SOLV_dec_deg:.10f} "
         f"{ra_offset_pred:.10f} {dec_offset_pred:.10f} "
         f"{obs_ra:.10f} {obs_dec:.10f}\n"
     )
+    log_parent = Path(log_path).parent
+    if log_parent != Path("."):
+        log_parent.mkdir(parents=True, exist_ok=True)
     with open(log_path, "a") as f:
         f.write(line)
 
@@ -253,14 +262,17 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # 1. Load models (as before)
+    # 1. Load the two single-target regressors trained by booster.py.
+    models_dir = Path(args.models_dir)
     model_ra = xgb.XGBRegressor()
-    model_ra.load_model("models/model_ra.json")
+    model_ra.load_model(str(models_dir / "model_ra.json"))
 
     model_dec = xgb.XGBRegressor()
-    model_dec.load_model("models/model_dec.json")
+    model_dec.load_model(str(models_dir / "model_dec.json"))
 
-    # 2. Get previous acquisition information from log
+    # 2. Get previous acquisition information from the log. This is the
+    # autoregressive feedback path: the previous predicted errors become
+    # features for the next prediction.
     prev_vals = read_previous_from_log(args.log_file)
 
     # 3. Build feature vector

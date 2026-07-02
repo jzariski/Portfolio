@@ -3,7 +3,7 @@
 ## coord.py
 - Has the most feature engineering, extra geometry included
 
-## coordimproved.py
+## coordbasic.py
 - Has basic feature engineering, takes into account geometric strucutres
 
 ## Run

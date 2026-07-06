@@ -13,3 +13,5 @@ A machine-learning Wordle experiment using both regression and neural model appr
 ## TelQueue Scheduler Prototype
 An early-stage mixed-integer programming framework for building optimized telescope observing queues from nightly constraints.
 
+## expandedSynth
+An expanded suite of coordinate prediction tests using specialed hyper-parmeter tuning. Mainly for practice purposes.
